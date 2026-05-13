@@ -1,0 +1,19 @@
+# Stage2 训练配置（型号分类）
+
+# 数据
+data_dir: /mnt/data/rfuav/dataset_v5_final
+num_classes: 20       # 20种无人机型号
+
+# 模型
+model: resnet50
+pretrained: true
+
+# 训练超参数
+epochs: 100
+batch: 32
+lr: 0.001
+optimizer: adam
+weight_decay: 0.0001
+
+# 设备
+device: 0

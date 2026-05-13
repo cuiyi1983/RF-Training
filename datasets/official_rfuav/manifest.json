@@ -1,0 +1,31 @@
+{
+  "name": "official_rfuav",
+  "source": "RFUAV official dataset",
+  "url": "https://github.com/kitoweeknd/RFUAV",
+  "采集设备": {
+    "型号": "USRP X310",
+    "采样率": 100000000,
+    "中心频率": 5760000000,
+    "带宽": 100000000,
+    "数据类型": "Complex Float"
+  },
+  "DJI": [
+    {"机型": "DJI AVATA2", "VTSBW": ["10", "20", "40", "60"]},
+    {"机型": "DJI MAVIC3 PRO", "VTSBW": ["10", "20", "40", "60"]},
+    {"机型": "DJI MINI3", "VTSBW": ["10", "20", "40", "60"]},
+    {"机型": "DJI MINI3.1", "VTSBW": ["10", "20", "40", "60"]},
+    {"机型": "DJI MINI4 PRO", "VTSBW": ["10", "20", "40", "60"]},
+    {"机型": "DJI FPV COMBO", "VTSBW": ["10", "20", "40", "60"]}
+  ],
+  "non_DJI": [
+    "DAUTEL EVO NANO",
+    "DEVENTION DEVO",
+    "FRSKY X14",
+    "FRSKY X20R",
+    "FRSKY X9DP2019",
+    "FUTABA T14SG",
+    "Herelink Hx4"
+  ],
+  "文件格式": ".iq (二进制 Complex Float)",
+  "存储位置": "/mnt/data/rfuav/official_rfuav/"
+}

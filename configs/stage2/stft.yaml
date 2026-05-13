@@ -1,0 +1,13 @@
+# Stage2 STFT 配置（与 Stage1 相同）
+
+stft:
+  sample_rate: 60000000
+  nperseg: 1024
+  hop: 512
+  window: hamming
+  return_onesided: false
+  mag_transform: log1p
+  normalize: minmax01
+  target_shape: [1024, 1170]
+
+center_freq: 5805000000

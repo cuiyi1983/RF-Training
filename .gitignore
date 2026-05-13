@@ -1,0 +1,25 @@
+# 数据文件（禁止上传）
+*.iq
+*.npy
+*.npz
+*.rar
+*.zip
+*.dat
+
+# 模型文件
+*.pt
+*.pth
+*.onnx
+
+# 缓存
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# 训练输出
+outputs/
+runs/
+logs/
+
+# 敏感配置
+config/tencent-cloud-credentials.json
