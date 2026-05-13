@@ -772,7 +772,7 @@ python3 scripts/stage4_train_classifier.py
 | # | 问题 | 状态 | 决策 |
 |---|---|---|---|
 | 1 | **Noise 数据来源**：来自 `non_dji/` 目录 | ✅ 已解决 | **废弃，不用于 Stage1** |
-| 2 | **Bbox 策略**：固定 bbox（覆盖 ~77% 频谱区域）| ✅ 已解决 | 使用固定 bbox |
+| 2 | **Bbox 策略**：动态 bbox（能量阈值+连通域分析）| ✅ 已解决 | 信号检测算法驱动，外扩10% margin |
 | 3 | **Stage1 数据策略**：只训 Drone 还是 Drone + Noise？ | ✅ 已解决 | **只用 Drone，推理时无检测=无无人机** |
 | 4 | **Stage1 训练 epoch**：100 是否足够？ | ✅ 已决定 | 100 epochs + patience=20 早停 |
 | 5 | **Stage2 训练数据**：分类标签如何获取？ | ✅ 已决定 | 从 IQ 文件路径的目录结构提取机型名 |
