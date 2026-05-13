@@ -69,70 +69,93 @@ def connect_pluto():
         sys.exit(1)
 
 # ===================== 能力查询 =====================
+ATTR_TESTS = [
+    {
+        "name": "sample_rate",
+        "read": lambda sdr: getattr(sdr, "sample_rate", None),
+        "write": lambda sdr, v: setattr(sdr, "sample_rate", int(v)),
+        "test_value": 60e6,
+        "unit": "Hz",
+        "desc": "采样率"
+    },
+    {
+        "name": "center_freq",
+        "read": lambda sdr: getattr(sdr, "center_freq", None),
+        "write": lambda sdr, v: setattr(sdr, "center_freq", int(v)),
+        "test_value": 5800e6,
+        "unit": "Hz",
+        "desc": "中心频率"
+    },
+    {
+        "name": "filter_bandwidth",
+        "read": lambda sdr: getattr(sdr, "filter_bandwidth", None),
+        "write": lambda sdr, v: setattr(sdr, "filter_bandwidth", int(v)),
+        "test_value": 56e6,
+        "unit": "Hz",
+        "desc": "带宽"
+    },
+    {
+        "name": "rx_buffer_size",
+        "read": lambda sdr: getattr(sdr, "rx_buffer_size", None),
+        "write": lambda sdr, v: setattr(sdr, "rx_buffer_size", int(v)),
+        "test_value": 2048,
+        "unit": "samples",
+        "desc": "RX Buffer 大小"
+    },
+    {
+        "name": "gain",
+        "read": lambda sdr: getattr(sdr, "gain", None),
+        "write": lambda sdr, v: setattr(sdr, "gain", float(v)),
+        "test_value": 20.0,
+        "unit": "dB",
+        "desc": "增益"
+    },
+    {
+        "name": "rx_hardwaregain",
+        "read": lambda sdr: getattr(sdr, "rx_hardwaregain", None),
+        "write": lambda sdr, v: setattr(sdr, "rx_hardwaregain", float(v)),
+        "test_value": 20.0,
+        "unit": "dB",
+        "desc": "RX 增益"
+    },
+]
+
 def query_capabilities(uri):
-    """查询 Pluto 可配置参数及有效范围"""
+    """查询 Pluto 属性支持情况，读写测试"""
     sdr = adi.Pluto(uri) if uri else adi.Pluto()
-    info = {}
+    results = []
 
-    # 采样率
-    if hasattr(sdr, 'sample_rate'):
+    for attr in ATTR_TESTS:
+        name = attr["name"]
+        result = {"name": name, "desc": attr["desc"], "readable": False, "writable": False,
+                  "value": None, "error": None}
+
+        # 读取测试
         try:
-            cur = sdr.sample_rate
-            info['sample_rate'] = {
-                '当前': f"{cur/1e6:.2f} MHz",
-                '说明': "Pluto ADC 上限 61.44 MHz，建议 60 MHz"
-            }
-        except Exception:
-            info['sample_rate'] = {'当前': '无法读取'}
+            val = attr["read"](sdr)
+            result["readable"] = True
+            result["value"] = val
+        except Exception as e:
+            result["error"] = str(e)[:60]
 
-    # 中心频率
-    if hasattr(sdr, 'center_freq'):
-        try:
-            cur = sdr.center_freq
-            info['center_freq'] = {
-                '当前': f"{cur/1e6:.2f} MHz",
-                '说明': "有效范围 325-3800 MHz（破解后可达 5.9 GHz）"
-            }
-        except Exception:
-            info['center_freq'] = {'当前': '无法读取'}
-
-    # 带宽
-    if hasattr(sdr, 'filter_bandwidth'):
-        try:
-            cur = sdr.filter_bandwidth
-            info['bandwidth'] = {
-                '当前': f"{cur/1e6:.2f} MHz",
-                '说明': "建议 56 MHz"
-            }
-        except Exception:
-            info['bandwidth'] = {'当前': '无法读取'}
-
-    # 增益
-    for attr in ['rx_hardwaregain', 'gain']:
-        if hasattr(sdr, attr):
+        # 写入测试（仅测可读的属性）
+        if result["readable"]:
             try:
-                cur = getattr(sdr, attr)
-                info['gain'] = {
-                    '当前': f"{cur} dB",
-                    '说明': "有效范围 0-60 dB，建议 20 dB"
-                }
-                break
-            except Exception:
-                pass
+                orig = result["value"]
+                attr["write"](sdr, attr["test_value"])
+                after = attr["read"](sdr)
+                result["writable"] = (after == attr["test_value"])
+                # 恢复原值
+                if orig is not None:
+                    attr["write"](sdr, orig)
+            except Exception as e:
+                result["writable"] = False
+                result["write_error"] = str(e)[:60]
 
-    # rx_buffer_size
-    if hasattr(sdr, 'rx_buffer_size'):
-        try:
-            cur = sdr.rx_buffer_size
-            info['rx_buffer_size'] = {
-                '当前': f"{cur}",
-                '说明': "每次 rx() 返回的采样点数"
-            }
-        except Exception:
-            pass
+        results.append(result)
 
     del sdr
-    return info
+    return results
 
 # ===================== 测试函数 =====================
 def measure_burst_throughput(uri, bursts, buffer_size):
@@ -140,7 +163,6 @@ def measure_burst_throughput(uri, bursts, buffer_size):
     sdr = adi.Pluto(uri) if uri else adi.Pluto()
     sdr.rx_buffer_size = buffer_size
 
-    # 预热
     for _ in range(3):
         sdr.rx()
 
@@ -160,7 +182,7 @@ def measure_burst_throughput(uri, bursts, buffer_size):
         times.append(t1 - t0)
 
     total_time = sum(times)
-    total_bytes = total_samples * 8  # complex64 = 8 bytes
+    total_bytes = total_samples * 8
     throughput_mbps = (total_bytes / 1e6) / total_time if total_time > 0 else 0
 
     del sdr
@@ -217,28 +239,48 @@ def main():
     print("\n[*] 连接 Pluto...")
     uri = connect_pluto()
 
-    # Part 0: 能力查询
+    # Part 0: 属性读写测试
     print("\n" + "=" * 60)
-    print("Part 0: Pluto 可配置参数")
+    print("Part 0: Pluto 属性支持情况")
     print("=" * 60)
-    info = query_capabilities(uri)
-    for param, details in info.items():
-        print(f"\n  [{param}]")
-        for k, v in details.items():
-            print(f"    {k}: {v}")
+
+    attr_results = query_capabilities(uri)
+
+    print(f"\n{'属性名':<20} {'说明':<12} {'读':>4} {'写':>4} {'当前值':<20} {'备注'}")
+    print("-" * 80)
+
+    actual_sr = 60e6
+    for r in attr_results:
+        readable = "✓" if r["readable"] else "✗"
+        writable = "✓" if r["writable"] else "✗"
+        val_str = ""
+        if r["readable"] and r["value"] is not None:
+            v = r["value"]
+            if v > 1e9:
+                val_str = f"{v/1e9:.2f} GHz"
+            elif v > 1e6:
+                val_str = f"{v/1e6:.2f} MHz"
+            else:
+                val_str = str(v)
+            if r["name"] == "sample_rate":
+                actual_sr = float(v)
+        note = r.get("write_error", r.get("error", ""))
+        if len(note) > 20:
+            note = note[:18] + ".."
+        print(f"{r['name']:<20} {r['desc']:<12} {readable:>4} {writable:>4} {val_str:<20} {note}")
+
+    # 检查必要属性
+    print("\n[*] 必要属性检查:")
+    sr_ok = any(r["name"] == "sample_rate" and r["readable"] for r in attr_results)
+    print(f"    sample_rate: {'✓ 可用' if sr_ok else '✗ 不可用'}")
+    if not sr_ok:
+        print("\n    [✗] sample_rate 不可用，burst 传输测试可能失败")
+        actual_sr = 60e6  # 使用默认值
 
     # Part 1: Burst 传输测试
     print("\n" + "=" * 60)
     print("Part 1: Burst 传输测试")
     print("=" * 60)
-
-    # 用采样率默认值估算（实际以查询到的为准）
-    try:
-        sdr_tmp = adi.Pluto(uri) if uri else adi.Pluto()
-        actual_sr = sdr_tmp.sample_rate
-        del sdr_tmp
-    except Exception:
-        actual_sr = 60e6
 
     results = []
     for cfg in TEST_CONFIGS:
