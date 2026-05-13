@@ -1,19 +1,31 @@
-# STFT 预处理模块
+# STFT 预处理
 
-## 参数配置
+## Pluto 预处理（新增）
 
-| 参数 | 值 | 说明 |
+`pluto_preprocess.py` — Pluto IQ 数据转 RFUAV 格式频谱图
+
+**核心逻辑**：将 Pluto 采集的 60 MHz IQ 数据，通过与 RFUAV 官方一致的 STFT 参数转换为频谱图，供下游训练流程使用。
+
+### 参数对照表
+
+| 参数 | RFUAV 官方（USRP）| Pluto 适配 |
 |---|---|---|
-| 采样率 | 60 MHz | Pluto 上限 |
-| FFT 点数 | 1024 | 平衡频率/时间分辨率 |
-| hop | 512 | 50%重叠 |
-| window | Hamming | 与RFUAV官方一致 |
-| return_onesided | False | 完整频谱 |
-| 幅度变换 | log1p | 与训练数据一致 |
-| 归一化 | minmax01 | 归一化到[0,1] |
-| 目标shape | (1024, 1170) | 频谱图尺寸 |
+| 采样率 fs | 100 MHz | **60 MHz** |
+| nperseg | 1024 | 1024 |
+| window | hamming | hamming |
+| return_onesided | false | false |
+| fftshift | true | true |
+| 幅度类型 | 10·log10(\|Z\|) | 10·log10(\|Z\|) |
 
-## 主要脚本
+### 使用方式
 
-- `iq_to_spectrogram.py` — IQ 原始数据 → STFT 频谱图
-- `preprocessing_utils.py` — 降采样、归一化等工具
+```python
+from pluto_preprocess import PlutoPreprocessor
+
+proc = PlutoPreprocessor(config='../configs/stage1/pluto_stft.yaml')
+spec = proc.process_iq(iq_data)  # -> (640, 640) spectrogram
+```
+
+## RFUAV 官方参考
+
+`rfuav_reference.py` — RFUAV 官方 STFT 实现参考（来自 `graphic/RawDataProcessor.py`）

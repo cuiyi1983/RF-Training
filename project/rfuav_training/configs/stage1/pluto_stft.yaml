@@ -1,0 +1,25 @@
+# Pluto STFT 预处理配置
+# 严格遵循 RFUAV 官方 STFT 参数，仅适配 Pluto 硬件能力
+
+# ========== Pluto 硬件参数 ==========
+pluto:
+  sampling_rate: 60e6        # 60 MHz（Pluto 上限）
+  bandwidth: 56e6             # 56 MHz（Pluto 实际带宽）
+  center_freq: 5805e6        # 5805 MHz（推荐中心频率）
+  gain: 20                   # dB（已有验证数据确认可行）
+
+# ========== STFT 参数（与 RFUAV 官方一致）==========
+stft:
+  fs: 60e6                   # Pluto 采样率（区别于 RFUAV 官方 100 MHz）
+  nperseg: 1024              # 与 RFUAV 官方一致
+  hop: 512                   # 50% 重叠
+  window: hamming            # 与 RFUAV 官方一致
+  return_onesided: false     # 与 RFUAV 官方一致（完整频谱）
+  fftshift: true             # 与 RFUAV 官方一致
+  amp_type: dB               # 10 * log10(|Zxx|)，与 RFUAV 官方一致
+
+# ========== 频谱图输出尺寸 ==========
+output:
+  resize: [640, 640]         # YOLO 输入尺寸
+  # resize: [224, 224]      # 分类模型输入尺寸
+  normalize: minmax          # 0-1 归一化
