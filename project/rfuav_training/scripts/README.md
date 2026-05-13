@@ -11,12 +11,12 @@ Pluto USB 传输能力基准测试脚本。
 python pluto_usb_benchmark.py
 ```
 
+**依赖**：
+```bash
+pip install pyadi-iio numpy
+```
+
 **输出**：
 - 不同 burst 配置下的传输速度
 - 持续采集稳定性测试
 - 轮询周期估算（5 频点）
-
-**在 PC（Windows）上运行**，需要安装依赖：
-```bash
-pip install numpy adi
-```

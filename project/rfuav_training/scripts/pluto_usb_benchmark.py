@@ -4,6 +4,8 @@ Pluto USB 传输能力基准测试
 ============================
 测试 Pluto 通过 USB 连接时的实际数据传输能力。
 
+依赖：pip install pyadi-iio numpy
+
 用法：
     python pluto_usb_benchmark.py
 
@@ -17,7 +19,6 @@ import adi
 import numpy as np
 import time
 import sys
-import os
 
 # ===================== 配置 =====================
 PLUTO_URI = None  # 自动发现，或手动指定，如 "usb:2.6.5"
@@ -112,9 +113,7 @@ def sustained_acquisition_test(uri, duration_sec, bursts_per_read, buffer_size, 
     burst_count = 0
 
     while time.perf_counter() - start_time < duration_sec:
-        t0 = time.perf_counter()
         chunk = sdr.rx()
-        t1 = time.perf_counter()
 
         if len(chunk) > 0:
             samples_list.append(len(chunk))
@@ -151,28 +150,39 @@ def main():
 
     # 连接 Pluto
     print("\n[*] 连接 Pluto...")
-    if PLUTO_URI:
-        uri = PLUTO_URI
-        print(f"    使用指定 URI: {uri}")
-    else:
-        # 自动搜索
-        try:
-            sdr = adi.Pluto()
-            uri = None
-            print("    [✓] 自动发现 Pluto（USB）")
-        except Exception as e:
-            print(f"    [✗] 连接失败: {e}")
-            sys.exit(1)
 
-    sdr_test = adi.Pluto(uri) if uri else adi.Pluto()
     try:
-        sample_rate = sdr_test.sample_rate
-        print(f"    采样率: {sample_rate/1e6:.0f} MHz")
-        print(f"    中心频率: {sdr_test.center_freq/1e6:.0f} MHz")
-        del sdr_test
+        # 尝试网络连接（常见 IP）
+        for ip_uri in ["ip:192.168.2.1", "ip:192.168.2.10"]:
+            try:
+                sdr = adi.Pluto(ip_uri)
+                _ = sdr.rx()
+                print(f"    [✓] 通过 {ip_uri} 连接成功")
+                uri = ip_uri
+                break
+            except Exception:
+                continue
+        else:
+            # 尝试 USB 自动发现
+            try:
+                sdr = adi.Pluto()
+                _ = sdr.rx()
+                print("    [✓] USB 自动发现成功")
+                uri = None
+            except Exception as e:
+                print(f"    [✗] 连接失败: {e}")
+                sys.exit(1)
+    except Exception as e:
+        print(f"    [✗] 连接失败: {e}")
+        sys.exit(1)
+
+    sdr = adi.Pluto(uri) if uri else adi.Pluto()
+    try:
+        print(f"    采样率: {sdr.sample_rate/1e6:.0f} MHz")
+        print(f"    中心频率: {sdr.center_freq/1e6:.0f} MHz")
     except Exception as e:
         print(f"    [!] 无法读取部分属性: {e}")
-        del sdr_test
+    del sdr
 
     print("\n" + "=" * 60)
     print("Part 1: Burst 传输测试")
@@ -199,10 +209,10 @@ def main():
         print(f"    等效采样窗口: {window_ms:.2f} ms")
 
     # 汇总
-    print("\n" + "-" * 40)
+    print("\n" + "-" * 60)
     print("Burst 传输汇总:")
     print(f"{'配置':<25} {'耗时':>8} {'数据量':>10} {'速率':>10} {'等效窗口':>10}")
-    print("-" * 40)
+    print("-" * 60)
     for cfg, r in results:
         label = cfg['name']
         total_ms = r['total_time'] * 1000
@@ -234,8 +244,8 @@ def main():
     print("轮询周期估算（5 频点）")
     print("=" * 60)
     print(f"\n假设检测门限: 1-2 秒内发现")
-    print(f"\n{'配置':<25} {'等效窗口':>10} {'5频点轮询':>12} {'2秒内轮询次数':>14}")
-    print("-" * 60)
+    print(f"\n{'配置':<25} {'等效窗口':>10} {'5频点轮询周期':>14} {'2秒内轮询次数':>14}")
+    print("-" * 75)
 
     for cfg, r in results:
         label = cfg['name']
@@ -246,7 +256,7 @@ def main():
         cycle_ms = per_freq_ms * 5
         cycles_in_2s = 2000 / cycle_ms if cycle_ms > 0 else 999
 
-        print(f"{label:<25} {window_ms:>9.2f}ms {cycle_ms:>11.1f}ms {cycles_in_2s:>13.1f}次")
+        print(f"{label:<25} {window_ms:>9.2f}ms {cycle_ms:>13.1f}ms {cycles_in_2s:>13.1f}次")
 
     print("\n" + "=" * 60)
     print("推荐配置")
