@@ -216,7 +216,7 @@ dataset_v5_final/
 ```
 
 **数据划分依据**：
-- **Drone 类**：来自 `official_rfuav/` 下的 DJI 机型（AVATA2、MAVIC3 PRO、MINI3.1、MINI4 PRO、FPV COMBO）
+- **Drone 类**：来自 `official_rfuav/` 下的全部 7 个机型（AVATA2、FPV COMBO、MAVIC3 PRO、DAUTEL EVO NANO、MINI3.1、MINI4 PRO、DEVENTION DEVO）
 
 > ⚠️ **重要更新（2026-05-13）**：Stage1 **不使用 Noise 类**。
 > 
@@ -265,27 +265,66 @@ def spectrogram_to_image(spec, target_size=TARGET_SIZE):
     pil = pil.resize(target_size, Image.BILINEAR)
     return pil
 
-def generate_labels(spec_shape, center_freq, sample_rate):
+def generate_labels(spec_db, spec_shape):
     """
-    生成 YOLO 标签
+    基于信号检测算法动态生成 YOLO bbox
     
-    RFUAV 的跳频信号特点：
-    - 信号能量集中在特定频率区间
-    - 用信号检测算法找到活跃区域 → 生成 bbox
-    
-    简化策略：使用固定 bbox（覆盖 DJI 跳频典型范围）
-    - DJI 5.8GHz: 5725-5850 MHz → 占带宽 ~125 MHz
-    - Pluto 60MHz 带宽: 5760-5820 MHz（中心 5790 MHz）
-    - bbox 覆盖整个可用带宽
+    流程：能量阈值分割 → 连通域分析 → 外接矩形
+    输入：spec_db: STFT 幅度（dB格式），spec_shape: (H, W)
+    输出：YOLO 格式标签字符串，或 None（检测不到信号）
     """
-    h, w = spec_shape  # 频谱图尺寸
+    import numpy as np
+    from scipy import ndimage
     
-    # 固定 bbox：覆盖整个频谱图高度的 80%
-    # center_x=0.5（水平方向中心）, center_y=0.5（垂直方向中心）
-    # width=1.0（整个宽度）, height=0.8（80% 高度）
-    bbox = [0.5, 0.5, 1.0, 0.8]
+    H, W = spec_shape
     
-    # class_id: 0=drone（Stage1 只检测 drone，无检测=无无人机）
+    # ① 噪声底估计（按频率轴方向，列统计）
+    noise_floor = np.percentile(spec_db, 15, axis=1, keepdims=True)  # shape: (H, 1)
+    
+    # ② 能量阈值分割：高于噪声底 6dB 的点标记为信号
+    threshold = noise_floor + 6.0
+    mask = (spec_db > threshold).astype(np.uint8)
+    
+    # ③ 形态学清理：开运算去噪点 + 闭运算填空洞
+    struct = np.ones((3, 3), dtype=np.uint8)
+    mask = ndimage.binary_opening(mask, structure=struct)
+    mask = ndimage.binary_closing(mask, structure=struct)
+    
+    # ④ 连通域分析
+    labeled, num_features = ndimage.label(mask)
+    if num_features == 0:
+        return None  # 检测不到信号，不生成标签
+    
+    # ⑤ 取最大连通域的外接矩形
+    areas = ndimage.sum(mask, labeled, range(1, num_features + 1))
+    largest_region_id = areas.argmax() + 1  # area 数组索引从 0，但 labeled 从 1 开始
+    
+    # 标记最大连通域
+    largest_mask = (labeled == largest_region_id)
+    
+    # 计算外接矩形（行=频率方向，列=时间方向）
+    rows = np.any(largest_mask, axis=1)  # 每行是否有信号点
+    cols = np.any(largest_mask, axis=0)  # 每列是否有信号点
+    
+    rmin, rmax = np.where(rows)[0][[0, -1]]
+    cmin, cmax = np.where(cols)[0][[0, -1]]
+    
+    # ⑥ 外扩 10% margin
+    margin_h = int(H * 0.10)
+    margin_w = int(W * 0.10)
+    rmin = max(0, rmin - margin_h)
+    rmax = min(H - 1, rmax + margin_h)
+    cmin = max(0, cmin - margin_w)
+    cmax = min(W - 1, cmax + margin_w)
+    
+    # ⑦ 转换为 YOLO 归一化格式 (cx, cy, w, h)
+    cx = (cmin + cmax) / 2.0 / W
+    cy = (rmin + rmax) / 2.0 / H
+    w = (cmax - cmin) / 1.0 / W
+    h = (rmax - rmin) / 1.0 / H
+    
+    # class_id: 0=drone
+    bbox = [cx, cy, w, h]
     label = "0 " + " ".join([f"{v:.6f}" for v in bbox])
     return label
 
@@ -325,21 +364,30 @@ def main():
         for i, fpath in enumerate(files):
             try:
                 iq = np.load(fpath)
-                spec = iq_to_spectrogram(iq)
-                img = spectrogram_to_image(spec)
+                spec_db = iq_to_spectrogram(iq)  # 返回 dB 格式频谱图
+                img = spectrogram_to_image(spec_db)
                 
-                # 输出文件名
-                base = os.path.splitext(os.path.basename(fpath))[0]
-                img_path = os.path.join(img_dir, f"{base}.jpg")
-                lbl_path = os.path.join(lbl_dir, f"{base}.txt")
+                # 从 IQ 文件路径提取机型名（路径结构：.../official_rfuav/{机型名}/.../{base}.npy）
+                rel_path = os.path.relpath(fpath, SRC_PREPROCESSED)
+                parts = rel_path.split(os.sep)  # 按路径分隔
+                model_name = parts[0] if len(parts) > 1 else 'unknown'
+                # 文件名规范：{机型名}__{原始base}.jpg（例如 DJI_AVATA2__pack1_0-1s.jpg）
+                original_base = os.path.splitext(os.path.basename(fpath))[0]
+                safe_model_name = model_name.replace(' ', '_')
+                out_base = f"{safe_model_name}__{original_base}"
+                
+                img_path = os.path.join(img_dir, f"{out_base}.jpg")
+                lbl_path = os.path.join(lbl_dir, f"{out_base}.txt")
                 
                 # 保存图片
                 img.save(img_path, quality=95)
                 
-                # 生成标签（简化：全用固定 bbox）
-                label = generate_labels(spec.shape, 0, 0)
-                with open(lbl_path, 'w') as f:
-                    f.write(label + '\n')
+                # 动态 bbox 标签（基于信号检测）
+                label = generate_labels(spec_db, spec_db.shape)  # spec_db 是 dB 格式
+                if label is not None:
+                    with open(lbl_path, 'w') as f:
+                        f.write(label + '\n')
+                # else: 检测不到信号，不生成标签文件（该样本不入训练集）
                 
                 if (i+1) % 200 == 0:
                     print(f"  {split_name}: {i+1}/{len(files)}")
@@ -587,9 +635,15 @@ class SpectrogramDataset(Dataset):
         img_path = os.path.join(self.root, self.split, 'images', self.images[idx])
         image = Image.open(img_path).convert('RGB')
         
-        # 标签从文件名或目录结构获取
-        # 这里需要实现标签解析逻辑
-        label = 0  # placeholder
+        # 标签从文件名解析机型名
+        # Stage1 频谱图文件命名规范：{机型名}__{原IQ文件名}.jpg
+        # 例如：DJI_AVATA2__pack1_0-1s.jpg
+        # Stage3 直接从文件名提取机型名
+        filename = os.path.splitext(self.images[idx])[0]  # 去掉 .jpg
+        model_name = filename.split('__')[0]             # 取 __ 前面的机型名
+        # 机型名还原为空格（生成时将空格替换为下划线）
+        model_name = model_name.replace('_', ' ')
+        label = CLASS_MAP.get(model_name, 0)
         
         if self.transform:
             image = self.transform(image)
@@ -671,7 +725,7 @@ if __name__ == '__main__':
 ## 推理 Pipeline
 
 ```
-Pluto 采集 IQ（60MHz, burst=100）
+Pluto 采集 IQ（60MHz, burst=200）
       ↓
 STFT 频谱图（640×640）
       ↓

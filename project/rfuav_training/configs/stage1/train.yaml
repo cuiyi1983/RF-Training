@@ -1,23 +1,25 @@
-# Stage 1 训练配置
-# 继承 RFUAV 官方 ResNet50 训练流程，针对 Pluto 频谱图适配
+# Stage1 YOLO 训练配置
+# ⚠️ 本文件已废弃，请参考 TRAINING_GUIDE.md
 
 # ========== 数据集路径 ==========
 data:
-  train: /mnt/data/rfuav/dataset_v5_final/train/
-  val:   /mnt/data/rfuav/dataset_v5_final/val/
+  train: /mnt/data/rfuav/yolo_dataset/images/train/
+  val:   /mnt/data/rfuav/yolo_dataset/images/val/
 
 # ========== 模型配置 ==========
 model:
-  name: resnet50            # RFUAV 官方 baseline 模型
-  num_classes: 2             # Stage1 二分类：drone / noise
-  pretrained: true          # ImageNet 预训练权重
+  name: yolov5s             # YOLOv5s（Ultralytics）
+  num_classes: 1            # drone only（无检测=无无人机）
+  pretrained: coco           # COCO 预训练权重
 
 # ========== 训练超参数 ==========
 train:
-  batch_size: 8
-  image_size: 640           # YOLO 模式
-  epochs: 150
-  lr: 0.00001               # RFUAV 官方学习率
+  batch_size: 16
+  image_size: 640
+  epochs: 300               # 最大训练轮数
+  patience: 20              # 早停：连续20个epoch无提升则停止
+  save_period: 10           # 每10个epoch保存一次
+  lr: 0.01
   optimizer: adam
   device: cuda
   save_path: ./outputs/stage1/

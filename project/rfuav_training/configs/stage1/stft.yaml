@@ -1,4 +1,5 @@
 # Stage1 STFT 配置
+# ⚠️ 本文件已废弃，请参考 pluto_stft.yaml
 
 stft:
   sample_rate: 60000000   # 60MHz（Pluto）
@@ -6,9 +7,8 @@ stft:
   hop: 512
   window: hamming
   return_onesided: false
-  mag_transform: log1p
-  normalize: minmax01
+  fftshift: true
+  amp_type: dB             # 10*log10(|Zxx|)，与 RFUAV 官方一致
+  normalize: minmax01      # 0-1 归一化
   target_shape: [1024, 1170]
-
-# 目标频率（DJI 5.8GHz 频段）
-center_freq: 5805000000   # 5805 MHz
+  resize: [640, 640]      # YOLO 输入尺寸

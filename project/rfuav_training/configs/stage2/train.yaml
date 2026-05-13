@@ -1,19 +1,33 @@
-# Stage2 训练配置（型号分类）
+# Stage2 ResNet152 训练配置
+# ⚠️ 本文件已废弃，请参考 TRAINING_GUIDE.md
 
-# 数据
-data_dir: /mnt/data/rfuav/dataset_v5_final
-num_classes: 20       # 20种无人机型号
+# ========== 数据集路径 ==========
+data_dir: /mnt/data/rfuav/rfuav_training/classify_dataset
 
-# 模型
-model: resnet50
-pretrained: true
+# ========== 模型配置 ==========
+model:
+  name: resnet152
+  pretrained: true           # ImageNet 预训练权重
+  num_classes: 7             # 7 个机型（不含 noise 类）
 
-# 训练超参数
-epochs: 100
-batch: 32
-lr: 0.001
-optimizer: adam
-weight_decay: 0.0001
+# ========== 机型标签映射 ==========
+class_names:
+  - DJI AVATA2
+  - DJI FPV COMBO
+  - DJI MAVIC3 PRO
+  - DJI MINI3.1
+  - DJI MINI4 PRO
+  - DAUTEL EVO NANO
+  - DEVENTION DEVO
 
-# 设备
-device: 0
+# ========== 训练超参数 ==========
+train:
+  batch_size: 32
+  image_size: 224
+  epochs: 100
+  lr: 1e-4
+  optimizer: adam
+  weight_decay: 0.0001
+  device: cuda
+  save_path: ./outputs/stage2/
+  shuffle: true
