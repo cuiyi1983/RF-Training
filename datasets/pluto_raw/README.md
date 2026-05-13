@@ -5,6 +5,8 @@
 ## scan_20260508 — 0508 测试数据集
 
 **采集脚本**：`pluto_iq_collector_targeted.py`
+**脚本路径（frps 服务器）**：`/tmp/pluto_iq_collector_targeted.py`
+**脚本修改时间**：2026-05-05 13:42
 
 **采集参数**（来自脚本配置）：
 | 参数 | 值 |
@@ -12,7 +14,6 @@
 | 采样率 | **60 MHz** |
 | 增益 | **20 dB** |
 | 中心频点 | 5760 / 5775 / 5800 / 5825 / 5850 MHz |
-| 带宽 | 60 MHz |
 | Burst/轮 | 500 次 |
 | 轮数 | 3 轮 |
 | Buffer Size | 2048 |
@@ -25,8 +26,6 @@
 |---|---|---|
 | `noise/` | 无无人机 | 5 |
 | `drone/` | 有无人机 | 5 |
-
-**文件命名**：`SCAN_<freq>_3.1Msps.npz`
 
 **NPZ 文件格式**：
 ```python
@@ -58,5 +57,5 @@ pluto_raw/
     │   ├── SCAN_5800_3.1Msps.npz
     │   ├── SCAN_5825_3.1Msps.npz
     │   └── SCAN_5850_3.1Msps.npz
-    └── pluto_iq_collector_targeted.py  ← 采集脚本
+    └── pluto_iq_collector_targeted.py  ← 采集脚本（2026-05-05）
 ```
