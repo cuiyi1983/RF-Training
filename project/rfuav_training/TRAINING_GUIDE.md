@@ -191,47 +191,38 @@ python3 scripts/stage0_preprocess.py
 | 幅度 | 10·log10(\|Zxx\|) | dB 归一化 |
 | resize | 640×640 | YOLO 输入尺寸 |
 
-### 频谱图生成脚本：`scripts/stage1_generate_spectrograms.py`
+### 频谱图生成脚本：使用已有实现
 
-```python
-#!/usr/bin/env python3
-"""
-Stage 1: 生成 STFT 频谱图
-输出 YOLO 格式数据集（images/ + labels/）
-"""
-import os
-import numpy as np
-from scipy.signal import stft, windows
-from PIL import Image
+**已有正确的实现**：`/mnt/data/rfuav/prepare_dataset_v5_final.py`
 
-# ========== 配置 ==========
-SRC_PREPROCESSED = "/mnt/data/rfuav/rfuav_training/preprocessed"
-OUT_BASE = "/mnt/data/rfuav/rfuav_training/yolo_dataset"
+该脚本已完整实现：
+- 降采样（100→60 MHz）
+- 按 10ms 窗口切片
+- 正确的数据划分（80/20 train/val）
 
-# STFT 参数
-FS = 60e6
-NFFT = 1024
-NOVLAP = 512
-WIN = windows.hamming(NFFT)
+**使用方法**：
+```bash
+cd /mnt/data/rfuav
+python3 prepare_dataset_v5_final.py
+```
 
-# YOLO 输入尺寸
-TARGET_SIZE = (640, 640)
+**输出**：`/mnt/data/rfuav/dataset_v5_final/`
+```
+dataset_v5_final/
+├── train/
+│   └── drone/    (4574 samples)
+└── val/
+    └── drone/    (1900 samples)
+```
 
-# ========== 关键：确定噪声数据来源 ==========
-# RFUAV 数据中，每个机型的部分文件是纯噪声（无无人机信号）
-# 从 XML 元数据中读取 ReferenceSNRLevel 或通过人工标注确定
-# 以下为简化策略：使用 RFUAV 自带的噪声采样文件
+**数据划分依据**：
+- **Drone 类**：来自 `official_rfuav/` 下的 DJI 机型（AVATA2、MAVIC3 PRO、MINI3.1、MINI4 PRO、FPV COMBO）
 
-NOISE_SAMPLES_DIR = "/mnt/data/rfuav/rfuav_training/noise_samples"
-
-def load_noise_samples():
-    """加载噪声采样文件列表"""
-    noise_files = []
-    if os.path.exists(NOISE_SAMPLES_DIR):
-        for fn in os.listdir(NOISE_SAMPLES_DIR):
-            if fn.endswith('.npy'):
-                noise_files.append(os.path.join(NOISE_SAMPLES_DIR, fn))
-    return noise_files
+> ⚠️ **重要更新（2026-05-13）**：Stage1 **不使用 Noise 类**。
+> 
+> **原因**：non_dji 信号（如 Futaba/FRSKY 遥控器）有自己的跳频特征，与"真正纯噪声"完全不同。把 non_dji 当 noise 训练可能导致模型学到"non_dji 特征 = noise"，反而干扰 drone 识别。
+> 
+> **正确做法**：Stage1 只用 Drone 数据训练。推理时，有检测框 = 有无人机；无检测框 = 无无人机。
 
 def iq_to_spectrogram(iq_data):
     """IQ → dB 归一化频谱图"""
@@ -294,7 +285,7 @@ def generate_labels(spec_shape, center_freq, sample_rate):
     # width=1.0（整个宽度）, height=0.8（80% 高度）
     bbox = [0.5, 0.5, 1.0, 0.8]
     
-    # class_id: 0=无人机, 1=噪声（Stage1 二分类）
+    # class_id: 0=drone（Stage1 只检测 drone，无检测=无无人机）
     label = "0 " + " ".join([f"{v:.6f}" for v in bbox])
     return label
 
@@ -391,8 +382,8 @@ path: /mnt/data/rfuav/rfuav_training/yolo_dataset
 train: images/train
 val: images/val
 
-nc: 2
-names: ['drone', 'noise']
+nc: 1
+names: ['drone']  # Stage1: 只检测 drone，推理时无检测=无无人机
 """
     with open(DATA_YAML, 'w') as f:
         f.write(content.strip())
@@ -688,11 +679,12 @@ python3 scripts/stage4_train_classifier.py
 
 ---
 
-## 关键决策点（待确认）
+## 关键决策点
 
-| # | 问题 | 影响 |
-|---|---|---|
-| 1 | **Noise 数据来源**：RFUAV 数据中噪声文件如何识别？ | 影响 Stage1 数据集构建 |
-| 2 | **Bbox 策略**：用固定 bbox 还是信号检测算法自动生成？ | 影响标签质量和模型泛化 |
-| 3 | **Stage1 训练 epoch**：默认 100 是否足够？ | 影响训练时间和精度 |
-| 4 | **Stage2 训练数据**：分类标签如何获取？ | 当前方案依赖文件名编码，需要实现解析逻辑 |
+| # | 问题 | 状态 | 决策 |
+|---|---|---|---|
+| 1 | **Noise 数据来源**：来自 `non_dji/` 目录 | ✅ 已解决 | **废弃，不用于 Stage1** |
+| 2 | **Bbox 策略**：固定 bbox（覆盖 ~77% 频谱区域）| ✅ 已解决 | 使用固定 bbox |
+| 3 | **Stage1 数据策略**：只训 Drone 还是 Drone + Noise？ | ✅ 已解决 | **只用 Drone，推理时无检测=无无人机** |
+| 4 | **Stage1 训练 epoch**：默认 100 是否足够？ | ⚠️ 待讨论 | — |
+| 5 | **Stage2 训练数据**：分类标签如何获取？ | ⚠️ 待讨论 | — |
