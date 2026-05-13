@@ -41,7 +41,6 @@ SUSTAINED_TEST = {
 # ===================== 连接函数 =====================
 def connect_pluto():
     """连接 Pluto，优先网络 URI，回退 USB 自动发现"""
-    # 1. 尝试手动指定的 URI
     if PLUTO_URI:
         try:
             sdr = adi.Pluto(PLUTO_URI)
@@ -51,7 +50,6 @@ def connect_pluto():
         except Exception as e:
             print(f"    [!] 指定 URI 失败: {e}")
 
-    # 2. 尝试常见网络 URI
     for ip in ["ip:192.168.2.1", "ip:192.168.2.10", "ip:192.168.1.10"]:
         try:
             sdr = adi.Pluto(ip)
@@ -61,7 +59,6 @@ def connect_pluto():
         except Exception:
             pass
 
-    # 3. USB 自动发现
     try:
         sdr = adi.Pluto()
         sdr.rx()
@@ -70,6 +67,72 @@ def connect_pluto():
     except Exception as e:
         print(f"    [✗] 连接失败: {e}")
         sys.exit(1)
+
+# ===================== 能力查询 =====================
+def query_capabilities(uri):
+    """查询 Pluto 可配置参数及有效范围"""
+    sdr = adi.Pluto(uri) if uri else adi.Pluto()
+    info = {}
+
+    # 采样率
+    if hasattr(sdr, 'sample_rate'):
+        try:
+            cur = sdr.sample_rate
+            info['sample_rate'] = {
+                '当前': f"{cur/1e6:.2f} MHz",
+                '说明': "Pluto ADC 上限 61.44 MHz，建议 60 MHz"
+            }
+        except Exception:
+            info['sample_rate'] = {'当前': '无法读取'}
+
+    # 中心频率
+    if hasattr(sdr, 'center_freq'):
+        try:
+            cur = sdr.center_freq
+            info['center_freq'] = {
+                '当前': f"{cur/1e6:.2f} MHz",
+                '说明': "有效范围 325-3800 MHz（破解后可达 5.9 GHz）"
+            }
+        except Exception:
+            info['center_freq'] = {'当前': '无法读取'}
+
+    # 带宽
+    if hasattr(sdr, 'filter_bandwidth'):
+        try:
+            cur = sdr.filter_bandwidth
+            info['bandwidth'] = {
+                '当前': f"{cur/1e6:.2f} MHz",
+                '说明': "建议 56 MHz"
+            }
+        except Exception:
+            info['bandwidth'] = {'当前': '无法读取'}
+
+    # 增益
+    for attr in ['rx_hardwaregain', 'gain']:
+        if hasattr(sdr, attr):
+            try:
+                cur = getattr(sdr, attr)
+                info['gain'] = {
+                    '当前': f"{cur} dB",
+                    '说明': "有效范围 0-60 dB，建议 20 dB"
+                }
+                break
+            except Exception:
+                pass
+
+    # rx_buffer_size
+    if hasattr(sdr, 'rx_buffer_size'):
+        try:
+            cur = sdr.rx_buffer_size
+            info['rx_buffer_size'] = {
+                '当前': f"{cur}",
+                '说明': "每次 rx() 返回的采样点数"
+            }
+        except Exception:
+            pass
+
+    del sdr
+    return info
 
 # ===================== 测试函数 =====================
 def measure_burst_throughput(uri, bursts, buffer_size):
@@ -115,7 +178,6 @@ def sustained_test(uri, duration_sec, buffer_size):
     sdr = adi.Pluto(uri) if uri else adi.Pluto()
     sdr.rx_buffer_size = buffer_size
 
-    # 预热
     for _ in range(3):
         sdr.rx()
 
@@ -155,35 +217,28 @@ def main():
     print("\n[*] 连接 Pluto...")
     uri = connect_pluto()
 
-    # 配置参数
-    print("\n[*] 配置参数...")
-    sdr = adi.Pluto(uri) if uri else adi.Pluto()
-
-    # 采样率
-    try:
-        sdr.sample_rate = int(60e6)
-        actual_sr = sdr.sample_rate
-        print(f"    采样率: {actual_sr/1e6:.0f} MHz")
-    except Exception as e:
-        print(f"    [!] 无法设置采样率: {e}")
-        actual_sr = 60e6
-
-    # 增益
-    for gain_attr in ["rx_hardwaregain", "gain"]:
-        if hasattr(sdr, gain_attr):
-            try:
-                setattr(sdr, gain_attr, 20)
-                print(f"    增益（{gain_attr}）: {getattr(sdr, gain_attr)} dB")
-                break
-            except Exception:
-                pass
-
-    del sdr
+    # Part 0: 能力查询
+    print("\n" + "=" * 60)
+    print("Part 0: Pluto 可配置参数")
+    print("=" * 60)
+    info = query_capabilities(uri)
+    for param, details in info.items():
+        print(f"\n  [{param}]")
+        for k, v in details.items():
+            print(f"    {k}: {v}")
 
     # Part 1: Burst 传输测试
     print("\n" + "=" * 60)
     print("Part 1: Burst 传输测试")
     print("=" * 60)
+
+    # 用采样率默认值估算（实际以查询到的为准）
+    try:
+        sdr_tmp = adi.Pluto(uri) if uri else adi.Pluto()
+        actual_sr = sdr_tmp.sample_rate
+        del sdr_tmp
+    except Exception:
+        actual_sr = 60e6
 
     results = []
     for cfg in TEST_CONFIGS:
