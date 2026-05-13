@@ -371,7 +371,8 @@ import subprocess
 
 YOLO_REPO = "/mnt/data/rfuav/rfuav_training/yolov5"
 DATA_YAML = "/mnt/data/rfuav/rfuav_training/yolo_dataset.yaml"
-EPOCHS = 100
+EPOCHS = 300
+PATIENCE = 20              # 早停：连续20个epoch无提升则停止
 BATCH_SIZE = 16
 IMG_SIZE = 640
 
@@ -397,6 +398,8 @@ def main():
         '--img', str(IMG_SIZE),
         '--batch', str(BATCH_SIZE),
         '--epochs', str(EPOCHS),
+        '--patience', str(PATIENCE),          # 早停
+        '--save_period', '10',
         '--data', DATA_YAML,
         '--weights', 'yolov5s.pt',    # COCO 预训练权重
         '--name', 'rfuav_stage1',
@@ -436,6 +439,24 @@ python3 scripts/stage2_train_yolo.py
 ## Stage 3: Stage2 分类数据准备
 
 **目标**：将 Stage1 的检测结果（检测框区域）裁剪出来，构建 Stage2 分类数据集。
+
+**标签来源**：从 IQ 文件的目录路径提取机型名。
+
+```
+示例 IQ 路径：
+/mnt/data/rfuav/official_rfuav/DJI AVATA2/DJI AVATA2/VTSBW=20/pack2_0-1s.iq
+                                                ↑
+                           从路径第2层目录名提取机型：DJI AVATA2
+
+分类标签（7 类）：
+  0: DJI AVATA2
+  1: DJI FPV COMBO
+  2: DJI MAVIC3 PRO
+  3: DJI MINI3.1
+  4: DJI MINI4 PRO
+  5: DAUTEL EVO NANO
+  6: DEVENTION DEVO
+```
 
 ### 数据准备脚本：`scripts/stage3_prepare_classify.py`
 
@@ -529,8 +550,21 @@ import numpy as np
 
 # ========== 配置 ==========
 DATA_DIR = "/mnt/data/rfuav/rfuav_training/classify_dataset"
-NUM_CLASSES = 8
-EPOCHS = 100
+NUM_CLASSES = 7  # 7个机型分类
+
+# 机型标签映射
+CLASS_NAMES = [
+    'DJI AVATA2',
+    'DJI FPV COMBO',
+    'DJI MAVIC3 PRO',
+    'DJI MINI3.1',
+    'DJI MINI4 PRO',
+    'DAUTEL EVO NANO',
+    'DEVENTION DEVO',
+]
+CLASS_MAP = {name: i for i, name in enumerate(CLASS_NAMES)}
+
+EPOCHS = 100  # ResNet152 通常收敛较快
 BATCH_SIZE = 32
 LR = 1e-4
 IMG_SIZE = 224
@@ -686,5 +720,5 @@ python3 scripts/stage4_train_classifier.py
 | 1 | **Noise 数据来源**：来自 `non_dji/` 目录 | ✅ 已解决 | **废弃，不用于 Stage1** |
 | 2 | **Bbox 策略**：固定 bbox（覆盖 ~77% 频谱区域）| ✅ 已解决 | 使用固定 bbox |
 | 3 | **Stage1 数据策略**：只训 Drone 还是 Drone + Noise？ | ✅ 已解决 | **只用 Drone，推理时无检测=无无人机** |
-| 4 | **Stage1 训练 epoch**：默认 100 是否足够？ | ⚠️ 待讨论 | — |
-| 5 | **Stage2 训练数据**：分类标签如何获取？ | ⚠️ 待讨论 | — |
+| 4 | **Stage1 训练 epoch**：100 是否足够？ | ✅ 已决定 | 100 epochs + patience=20 早停 |
+| 5 | **Stage2 训练数据**：分类标签如何获取？ | ✅ 已决定 | 从 IQ 文件路径的目录结构提取机型名 |
