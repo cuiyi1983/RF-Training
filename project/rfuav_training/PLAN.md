@@ -133,7 +133,7 @@ def downsample_iq(iq_data, orig_fs=100e6, target_fs=60e6):
 
 ### Stage 1 — YOLOv5 检测模型
 
-**任务**：二分类——有无人机 / 噪声，输出检测框
+**任务**：单类检测——有无人机（无检测=无无人机），输出检测框
 
 ```
 Step 1: 数据获取
@@ -147,14 +147,15 @@ Step 2: 预处理
 
 Step 3: 数据集构建
   - drone 类：7 个机型所有频谱图
-  - noise 类：噪声数据（可从 RFUAV 元数据生成，或额外采集）
+  - noise 类：不使用
   - 划分：train / val
 
 Step 4: 模型训练
   - 骨架：YOLOv5s（Ultralytics）
   - 输入：640×640
-  - 输出：bbox + 类别（drone/noise）
+  - 输出：bbox（1 类：drone）
   - 预训练：COCO 预训练权重
+  - epochs: 300 max, patience=20 早停
 
 Step 5: 验证
   - RFUAV 留出 20% 作为验证集
@@ -163,21 +164,22 @@ Step 5: 验证
 
 ### Stage 2 — ResNet152 分类模型
 
-**任务**：多分类——7 个机型 + 噪声，识别具体型号
+**任务**：多分类——7 个机型，识别具体型号
 
 ```
 Step 1: 数据准备
   - Stage1 生成的所有检测框区域
-  - 标注：每个区域对应的真实机型
+  - 标注：每个区域对应的真实机型（从 IQ 文件路径目录结构提取）
 
 Step 2: 数据集构建
-  - 8 类：7 个机型 + 噪声
+  - 7 类：7 个机型
   - 划分：train / val
 
 Step 3: 模型训练
   - 骨架：ResNet152（ImageNet 预训练）
   - 输入：检测框区域 resize 到 224×224
-  - 输出：8 类分类
+  - 输出：7 类分类
+  - epochs: 100
 
 Step 4: 验证
   - RFUAV 留出 20% 作为验证集
@@ -235,8 +237,9 @@ stage1:
   model: yolov5s
   input_size: [640, 640]
   pretrained: coco
-  classes: 2                   # drone, noise
-  epochs: 100
+  classes: 1                   # drone only（无检测=无无人机）
+  epochs: 300
+  patience: 20                  # 早停
   batch_size: 16
 ```
 
@@ -247,7 +250,7 @@ stage2:
   model: resnet152
   input_size: [224, 224]
   pretrained: imagenet
-  num_classes: 8               # 7 机型 + 噪声
+  num_classes: 7               # 7 机型
   epochs: 100
   batch_size: 32
 ```
@@ -266,6 +269,10 @@ stage2:
 | STFT 参数 | nperseg=1024，与 RFUAV 官方一致 | 2026-05-13 |
 | 训练策略 | 分步训，串起来用（路径 B）| 2026-05-13 |
 | 数据集 | 7 机型，~100 GB | 2026-05-13 |
+| Stage1 数据 | **只用 Drone，不使用 Noise 类** | 2026-05-13 |
+| Stage2 标签 | 从 IQ 文件路径目录结构提取机型名 | 2026-05-13 |
+| Stage1 epochs | 300 max, patience=20 早停 | 2026-05-13 |
+| Stage2 epochs | 100 | 2026-05-13 |
 
 ---
 
@@ -273,12 +280,8 @@ stage2:
 
 | # | 问题 | 状态 |
 |---|---|---|
-| 1 | Stage1 训练 epoch / batch size 具体数值 | 待定 |
-| 2 | Stage2 训练 epoch / batch size 具体数值 | 待定 |
-| 3 | ~~noise 类数据来源~~ | ✅ 已决定 | **不使用 Noise 类**，Stage1 只用 Drone 数据，推理时无检测=无无人机 |
 | 4 | 推理 burst 配置（burst=100 vs burst=500）| 待崔老板决策 |
-| 5 | ~~5.8GHz 和 2.4GHz 数据是否混合训练~~ | ✅ 已决定 | 混合训练，学跳频特征 |
-| 6 | 是否需要联系作者获取 RFUAV 全集（37 机型）| 待决策 |
+| 6 | 是否需要联系作者获取 RFUAV 全集（37 机型）| 待决策（暂不联系）|
 
 ---
 
