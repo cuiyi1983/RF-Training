@@ -1,10 +1,12 @@
 # 数据文件（禁止上传）
 *.iq
 *.npy
-*.npz
 *.rar
 *.zip
 *.dat
+
+# 例外：pluto_raw/scan_20260508/ 的 npz 文件
+!datasets/pluto_raw/scan_20260508/**/*.npz
 
 # 模型文件
 *.pt
