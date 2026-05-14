@@ -84,12 +84,10 @@ def test_connection(uri: str, connection_name: str) -> dict:
         print(f"测试 rx_buffer_size={size:>8} ({continuous_window_ms:.2f} ms 连续窗口)... ", end="", flush=True)
 
         try:
-            sdr.rx_buffer_size = size
 
-            # 改变 buffer_size 后需要 warmup：清空 DMA 过渡期数据
-            for _ in range(3):
-                _ = sdr.rx()
-
+            sdr.rx_destroy_buffer()
+            sdr.rx_buffer_size = size            
+            
             # 连续测试 5 次
             success_count = 0
             sample_counts = []

@@ -1,0 +1,150 @@
+[
+  {
+    "connection": "USB (\u81ea\u52a8\u53d1\u73b0)",
+    "uri": "",
+    "max_stable_size": 1048576,
+    "max_stable_ms": 17.476266666666668,
+    "buffer_sizes": [
+      {
+        "size": 1024,
+        "window_ms": 0.017066666666666667,
+        "success": true,
+        "throughput_mbps": 1.5622139469926972
+      },
+      {
+        "size": 2048,
+        "window_ms": 0.034133333333333335,
+        "success": true,
+        "throughput_mbps": 2.6285728909571033
+      },
+      {
+        "size": 4096,
+        "window_ms": 0.06826666666666667,
+        "success": true,
+        "throughput_mbps": 4.938226959207975
+      },
+      {
+        "size": 8192,
+        "window_ms": 0.13653333333333334,
+        "success": true,
+        "throughput_mbps": 9.075876982200022
+      },
+      {
+        "size": 16384,
+        "window_ms": 0.2730666666666667,
+        "success": true,
+        "throughput_mbps": 15.186435645086528
+      },
+      {
+        "size": 32768,
+        "window_ms": 0.5461333333333334,
+        "success": true,
+        "throughput_mbps": 30.029600678934784
+      },
+      {
+        "size": 65536,
+        "window_ms": 1.0922666666666667,
+        "success": true,
+        "throughput_mbps": 26.717463108411916
+      },
+      {
+        "size": 131072,
+        "window_ms": 2.1845333333333334,
+        "success": true,
+        "throughput_mbps": 31.54162230502394
+      },
+      {
+        "size": 262144,
+        "window_ms": 4.369066666666667,
+        "success": true,
+        "throughput_mbps": 32.031290326940905
+      },
+      {
+        "size": 524288,
+        "window_ms": 8.738133333333334,
+        "success": true,
+        "throughput_mbps": 30.842947098791544
+      },
+      {
+        "size": 1048576,
+        "window_ms": 17.476266666666668,
+        "success": true,
+        "throughput_mbps": 24.699538698891697
+      }
+    ]
+  },
+  {
+    "connection": "IP (ip:192.168.2.1)",
+    "uri": "ip:192.168.2.1",
+    "max_stable_size": 1048576,
+    "max_stable_ms": 17.476266666666668,
+    "buffer_sizes": [
+      {
+        "size": 1024,
+        "window_ms": 0.017066666666666667,
+        "success": true,
+        "throughput_mbps": 1.2955424588343796
+      },
+      {
+        "size": 2048,
+        "window_ms": 0.034133333333333335,
+        "success": true,
+        "throughput_mbps": 2.529113208461486
+      },
+      {
+        "size": 4096,
+        "window_ms": 0.06826666666666667,
+        "success": true,
+        "throughput_mbps": 5.039928145089078
+      },
+      {
+        "size": 8192,
+        "window_ms": 0.13653333333333334,
+        "success": true,
+        "throughput_mbps": 9.355736702250699
+      },
+      {
+        "size": 16384,
+        "window_ms": 0.2730666666666667,
+        "success": true,
+        "throughput_mbps": 16.573979220880418
+      },
+      {
+        "size": 32768,
+        "window_ms": 0.5461333333333334,
+        "success": true,
+        "throughput_mbps": 29.95856102818684
+      },
+      {
+        "size": 65536,
+        "window_ms": 1.0922666666666667,
+        "success": true,
+        "throughput_mbps": 26.30610309072406
+      },
+      {
+        "size": 131072,
+        "window_ms": 2.1845333333333334,
+        "success": true,
+        "throughput_mbps": 32.62290961366293
+      },
+      {
+        "size": 262144,
+        "window_ms": 4.369066666666667,
+        "success": true,
+        "throughput_mbps": 31.203709298850125
+      },
+      {
+        "size": 524288,
+        "window_ms": 8.738133333333334,
+        "success": true,
+        "throughput_mbps": 32.01432281632391
+      },
+      {
+        "size": 1048576,
+        "window_ms": 17.476266666666668,
+        "success": true,
+        "throughput_mbps": 28.940836630041428
+      }
+    ]
+  }
+]
