@@ -65,17 +65,16 @@ def test_connection(uri: str, connection_name: str) -> dict:
         print(f"❌ 连接失败: {e}")
         return results
 
-    # 先测试一次最小 buffer 确保连接正常
-    try:
-        sdr.rx_buffer_size = 1024
-        test_data = sdr.rx()
-        if len(test_data) != 1024:
-            print(f"❌ 连接测试失败")
-            return results
-        print(f"✅ 连接正常\n")
-    except Exception as e:
-        print(f"❌ 连接测试失败: {e}")
+    # 先测试一次最小 buffer 确保连接正常（带 warmup）
+    sdr.rx_buffer_size = 1024
+    for _ in range(3):  # warmup: 清空 DMA 过渡期数据
+        _ = sdr.rx()
+
+    test_data = sdr.rx()
+    if len(test_data) != 1024:
+        print(f"❌ 连接测试失败: 期望 1024, 实际 {len(test_data)}")
         return results
+    print(f"✅ 连接正常\n")
 
     # 测试每个 buffer_size
     for size in BUFFER_SIZES:
@@ -86,6 +85,10 @@ def test_connection(uri: str, connection_name: str) -> dict:
 
         try:
             sdr.rx_buffer_size = size
+
+            # 改变 buffer_size 后需要 warmup：清空 DMA 过渡期数据
+            for _ in range(3):
+                _ = sdr.rx()
 
             # 连续测试 5 次
             success_count = 0
