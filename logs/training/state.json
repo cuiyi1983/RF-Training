@@ -1,0 +1,19 @@
+{
+  "stages": {
+    "stage2_yolo": {
+      "status": "completed",
+      "started_at": "2026-05-13T22:38:28Z",
+      "completed_at": "2026-05-14T00:11:23Z",
+      "best_epoch": 62,
+      "best_map50": 0.80852,
+      "best_map5095": 0.74585,
+      "epochs_trained": 71,
+      "total_epochs": 71,
+      "early_stopped": true,
+      "patience_triggered_at_epoch": 71,
+      "errors": 0,
+      "best_pt": "/mnt/data/rfuav/rfuav_training/yolo_stage1_v2/run1/weights/best.pt",
+      "onnx_path": "/mnt/data/rfuav/rfuav_training/yolo_stage1_v2/run1/weights/best.onnx"
+    }
+  }
+}

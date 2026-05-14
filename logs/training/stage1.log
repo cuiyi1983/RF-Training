@@ -1,0 +1,11 @@
+[Stage1] 找到 137 个预处理文件
+[Stage1] 每个文件将切成 600000 样本/窗口 = 10ms 窗口
+[Stage1] Train: 109, Val: 28
+  [train] 20/109 | 生成=1865 跳过=22 窗口=1887 ETA=31.7min
+  [train] 40/109 | 生成=3857 跳过=30 窗口=3887 ETA=26.3min
+  [train] 60/109 | 生成=5857 跳过=30 窗口=5887 ETA=20.9min
+  [train] 80/109 | 生成=7792 跳过=95 窗口=7887 ETA=15.5min
+  [train] 100/109 | 生成=9742 跳过=106 窗口=9848 ETA=10.3min
+  [val] 20/28 | 生成=12430 跳过=128 窗口=12558 ETA=3.0min
+[Stage1] 完成! 生成图片=13230, 跳过(无信号)=128, 总窗口=13358, 错误=0, 耗时=2129.7s
+[Stage1] 日志已保存: /root/.openclaw/workspace/RF-Training/logs/training/stage1_log.json
