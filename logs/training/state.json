@@ -8,12 +8,39 @@
       "best_map50": 0.80852,
       "best_map5095": 0.74585,
       "epochs_trained": 71,
-      "total_epochs": 71,
       "early_stopped": true,
-      "patience_triggered_at_epoch": 71,
-      "errors": 0,
       "best_pt": "/mnt/data/rfuav/rfuav_training/yolo_stage1_v2/run1/weights/best.pt",
       "onnx_path": "/mnt/data/rfuav/rfuav_training/yolo_stage1_v2/run1/weights/best.onnx"
+    },
+    "stage3_classify_data": {
+      "status": "completed",
+      "started_at": "2026-05-14T09:10:00Z",
+      "completed_at": "2026-05-14T09:11:40Z",
+      "train_images": 7939,
+      "val_images": 519,
+      "class_distribution": {
+        "DAUTEL EVO NANO": 796,
+        "DEVENTION DEVO": 359,
+        "DJI AVATA2": 2726,
+        "DJI FPV COMBO": 2026,
+        "DJI MAVIC3 PRO": 1184,
+        "DJI MINI3.1": 681,
+        "DJI MINI4 PRO": 686
+      },
+      "errors": 0
+    },
+    "stage4_resnet": {
+      "status": "completed",
+      "started_at": "2026-05-14T09:30:00Z",
+      "completed_at": "2026-05-14T02:55:02.320891",
+      "best_acc": 100.0,
+      "epochs_trained": 100,
+      "errors": 0
     }
+  },
+  "hai_instance": {
+    "id": "hai-4a19zwr3",
+    "public_ip": "43.167.17.73",
+    "state": "RUNNING"
   }
 }
